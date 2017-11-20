@@ -7,28 +7,29 @@ contract SupplyChain {
 	/**
 	* Type used to encode the condition of a packet
 	* 
-	* @TODO: add all paremeters we'll keep track of
+	* @TODO: add all paremeters we'd like to keep track of
 	*/
 	struct Condition {
 		uint256 time;
 		uint8 humidity;
 		uint8 temperature;
-		address producer;
 		/* add other conditions here */
 	}
 	/**
 	* Type used to encode the packet
 	*/
 	struct Packet {
-		bytes32 [] name;
-		uint8 conditionID;
-		mapping(uint8 => Condition) condition;
+		//A unique name that can identify a product type
+		string name; 
+		//A single broker can add multiple conditions
+		mapping(address => Condition[]) condition;
+		//The original producer of the product 
 		address producer;
 	}
 	
 	
 	/** Keeps track of the first available id, it corresponds
-	to the number of tracked packets */
+	to the number of the current tracked packets */
 	uint8 currentID = 0;
 	/** The address of the contract creator */
 	address creator;
@@ -51,14 +52,13 @@ contract SupplyChain {
 	* @param packet_name the (unique?) name of a product type
 	* @return the id of the correctly added packet
 	*/
-	function addPacket(bytes32 [] packet_name) returns (uint8) {
+	function addPacket(string packet_name) returns (uint8) {
 		uint8 id = currentID;
 		currentID = currentID + 1;
 
         packets[id] = Packet(
 	        {
 			    name: packet_name,
-			    conditionID: 0,
 			    producer: msg.sender
 			}
 		);
@@ -72,18 +72,18 @@ contract SupplyChain {
 	*/
 	function addCondition(uint8 id, uint8 humidity, uint8 temperature) returns (bool,
 	string) {
-	    if(id > currentID) {
+	    if(id > currentID || id < 0) {
 	        /* The packet is not instantiated --> Return false and do nothing */
 	        return (false, "Cannot add condition to a not existing packet");
 	    }
-		uint8 conditionID = packets[id].conditionID;
-		packets[id].condition[conditionID] = Condition(
-		{
-			time: now,
-			temperature: temperature,
-			humidity: humidity,
-			producer: msg.sender
-		});
+		packets[id].condition[msg.sender].push(
+		    Condition(
+		    {
+			    time: now,
+			    temperature: temperature,
+			    humidity: humidity
+		    })
+		);
 		return (true, "ok");
 	}
 }
